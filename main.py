@@ -3,6 +3,7 @@ from PySide2.QtWidgets import(QApplication,QMainWindow,QDialog,QStackedWidget,QL
 from PySide2.QtCore import Qt, Signal
 from ui.ui_main import Ui_MainWindow
 from home import HomeScreen
+from theme_manager import ThemeManager
 
 class Login(QMainWindow):
     def __init__(self,stacked_widget: QStackedWidget):
@@ -11,7 +12,6 @@ class Login(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-
 
         self.ui.loginbutton.clicked.connect(self.loginfunction)
         self.ui.guest.clicked.connect(self.goToHome)
@@ -46,6 +46,10 @@ class ClickableLabel(QLabel):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # Initialize Theme
+    theme_manager = ThemeManager(app)
+    theme_manager.load_theme("dark") # Set default to dark
 
     stack = QStackedWidget()
     login = Login(stacked_widget=stack) 

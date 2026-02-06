@@ -1,10 +1,11 @@
 import uuid
-from PySide2.QtWidgets import QDialog, QMessageBox
+from PySide2.QtWidgets import QDialog, QMessageBox, QApplication, QPushButton
 from PySide2.QtCore import Qt
 from ui.ui_home import Ui_homeDialog
 from add_account_dialog import AddAccountDialog
 from account_card import AccountCard
 from controllers import MainController
+from theme_manager import ThemeManager
 
 class HomeScreen(QDialog):
     def __init__(self, parent=None):
@@ -28,6 +29,16 @@ class HomeScreen(QDialog):
         
         # Initialize Controller
         self.controller = MainController()
+
+        # Theme Support
+        self.theme_manager = ThemeManager(QApplication.instance())
+        
+        # Add Theme Toggle Button to Sidebar
+        self.themeBtn = QPushButton("Switch Theme")
+        self.themeBtn.setStyleSheet("background-color: #555; color: white; border-radius: 10px; padding: 10px;")
+        self.themeBtn.clicked.connect(self.theme_manager.toggle_theme)
+        self.ui.sideMenuVL.addWidget(self.themeBtn)
+        self.ui.sideMenuVL.addStretch() # Push everything up
         
         # Load existing accounts
         self._load_accounts()

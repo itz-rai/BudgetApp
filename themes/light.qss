@@ -1,0 +1,85 @@
+/* Light Mode Theme */
+QMainWindow, QDialog {
+    background-color: #f3f3f3;
+    color: #000000;
+}
+
+QLabel {
+    color: #333333;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+QPushButton {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+QPushButton:hover {
+    background-color: #f0f0f0;
+    border-color: #bbbbbb;
+}
+
+QPushButton:pressed {
+    background-color: #e0e0e0;
+}
+
+QLineEdit {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 4px;
+    selection-background-color: #0078d4;
+    selection-color: #ffffff;
+}
+
+QLineEdit:focus {
+    border: 1px solid #0078d4;
+}
+
+/* ScrollBar Styling */
+QScrollBar:vertical {
+    border: none;
+    background: #f3f3f3;
+    width: 10px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #cccccc;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    background: none;
+    height: 0px;
+}
+
+/* Account Card Specifics */
+QFrame#AccountCard {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+QFrame#AccountCard:hover {
+    border: 1px solid #0078d4;
+}
+
+QLabel#AccountName {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333333;
+}
+
+QLabel#AccountBalance {
+    font-size: 18px;
+    color: #107c10; /* Dark green */
+    font-weight: bold;
+}
