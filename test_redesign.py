@@ -34,6 +34,12 @@ def test_redesign():
     # Check Views
     assert content.count() >= 2, f"Expected at least 2 views, got {content.count()}"
     print("Views setup correctly.")
+    
+    # Check Account Container
+    acc_widget = getattr(home, "accScrollWidget", None)
+    assert acc_widget is not None, "Account Scroll Widget not found"
+    assert acc_widget.objectName() == "AccountContainer", f"Expected 'AccountContainer', got '{acc_widget.objectName()}'"
+    print("AccountContainer found and named correctly.")
 
     print("UI Redesign Instantiation Successful!")
 

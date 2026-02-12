@@ -28,6 +28,8 @@ class MainController:
             (name, balance, account_id)
         )
 
+    def delete_account(self, account_id: str) -> bool:
+        """Deletes an account from the database."""
         return self.db.execute_query(
             "DELETE FROM accounts WHERE id = ?",
             (account_id,)

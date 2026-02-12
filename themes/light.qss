@@ -126,3 +126,13 @@ QFrame#TransactionRow {
 QFrame#TransactionRow:hover {
     background-color: #f5f5f5;
 }
+
+/* Fix Scroll Area Backgrounds */
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#AccountContainer {
+    background-color: transparent;
+}

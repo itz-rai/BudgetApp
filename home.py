@@ -12,6 +12,7 @@ from theme_manager import ThemeManager
 class HomeScreen(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.view_mode = "grid" # grid or list
         # Main Layout
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -104,19 +105,62 @@ class HomeScreen(QDialog):
         actions_layout.addWidget(self.addAccBtn)
         
         actions_layout.addStretch()
+
+        # View Toggle Button
+        self.viewToggleBtn = QPushButton("List View")
+        self.viewToggleBtn.setCheckable(True)
+        self.viewToggleBtn.clicked.connect(self.toggle_view_mode)
+        actions_layout.addWidget(self.viewToggleBtn)
+
         layout.addLayout(actions_layout)
 
         # Accounts Grid (Scroll Area)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
+        
         self.accScrollWidget = QWidget()
-        self.accFlowLayout = QHBoxLayout(self.accScrollWidget) # Simple horizontal for now, or FlowLayout if needed
-        self.accFlowLayout.setAlignment(Qt.AlignLeft)
-        self.accFlowLayout.setSpacing(20)
+        self.accScrollWidget.setObjectName("AccountContainer")
+        # Default to Grid (QHBoxLayout)
+        self.accounts_layout = QHBoxLayout(self.accScrollWidget)
+        self.accounts_layout.setAlignment(Qt.AlignLeft)
+        self.accounts_layout.setSpacing(20)
+        
         scroll.setWidget(self.accScrollWidget)
         
         layout.addWidget(scroll)
+
+    def toggle_view_mode(self):
+        # Switch mode
+        if self.view_mode == "grid":
+            self.view_mode = "list"
+            self.viewToggleBtn.setText("Grid View")
+        else:
+            self.view_mode = "grid"
+            self.viewToggleBtn.setText("List View")
+
+        # Replace Layout
+        # 1. Clear existing layout items
+        while self.accounts_layout.count():
+            item = self.accounts_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # 2. Delete the layout itself by re-parenting to a temp widget
+        QWidget().setLayout(self.accounts_layout)
+        
+        # 3. Create new layout
+        if self.view_mode == "list":
+            self.accounts_layout = QVBoxLayout(self.accScrollWidget)
+            self.accounts_layout.setAlignment(Qt.AlignTop)
+            self.accounts_layout.setSpacing(10)
+        else:
+            self.accounts_layout = QHBoxLayout(self.accScrollWidget)
+            self.accounts_layout.setAlignment(Qt.AlignLeft)
+            self.accounts_layout.setSpacing(20)
+            
+        # 4. Reload Items
+        self._load_accounts()
 
     def setup_transactions_view(self):
         self.transWidget = QWidget()
@@ -205,8 +249,8 @@ class HomeScreen(QDialog):
     def _load_accounts(self):
         """Loads accounts from the database and displays them."""
         # Clear existing
-        while self.accFlowLayout.count():
-            item = self.accFlowLayout.takeAt(0)
+        while self.accounts_layout.count():
+            item = self.accounts_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
@@ -218,10 +262,11 @@ class HomeScreen(QDialog):
         # We need to make sure AccountCard can fit in the layout
         # Assuming AccountCard is a custom widget
         card = AccountCard(account_id, name, balance)
+        card.set_view_mode(self.view_mode)
         # card.setFixedSize(200, 150) # Optional: enforce size
         card.editRequested.connect(self._edit_account)
         card.deleteRequested.connect(self._delete_account)
-        self.accFlowLayout.addWidget(card)
+        self.accounts_layout.addWidget(card)
 
     # REMOVED OLD METHODS TO AVOID CONFLICTS
     # show_home_view, show_transactions_view, existing __init__ logic...
@@ -260,8 +305,8 @@ class HomeScreen(QDialog):
             name, balance = dlg.get_result()
             if self.controller.update_account(account_id, name, balance):
                 # Update UI
-                for i in range(self.accFlowLayout.count()):
-                    item = self.accFlowLayout.itemAt(i)
+                for i in range(self.accounts_layout.count()):
+                    item = self.accounts_layout.itemAt(i)
                     if not item: continue
                     widget = item.widget()
                     if isinstance(widget, AccountCard) and widget.account_id == account_id:
@@ -308,12 +353,12 @@ class HomeScreen(QDialog):
 
         if self.controller.delete_account(account_id):
             # Remove from UI
-            for i in range(self.accFlowLayout.count()):
-                item = self.accFlowLayout.itemAt(i)
+            for i in range(self.accounts_layout.count()):
+                item = self.accounts_layout.itemAt(i)
                 if not item: continue
                 widget = item.widget()
                 if isinstance(widget, AccountCard) and widget.account_id == account_id:
-                    self.accFlowLayout.removeWidget(widget)
+                    self.accounts_layout.removeWidget(widget)
                     widget.setParent(None)
                     widget.deleteLater()
                     break
