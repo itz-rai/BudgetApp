@@ -6,6 +6,7 @@ from PySide2.QtCore import Qt
 from add_account_dialog import AddAccountDialog
 from add_transaction_dialog import AddTransactionDialog
 from account_card import AccountCard
+from stat_card import StatCard
 from controllers import MainController
 from theme_manager import ThemeManager
 
@@ -89,78 +90,82 @@ class HomeScreen(QDialog):
         self.dashboardWidget = QWidget()
         layout = QVBoxLayout(self.dashboardWidget)
         layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
+        layout.setSpacing(25)
 
         # Header
         header = QLabel("Dashboard")
         header.setStyleSheet("font-size: 28px; font-weight: bold; color: #cdd6f4;")
         layout.addWidget(header)
 
-        # Actions Row
-        actions_layout = QHBoxLayout()
+        # 1. Stats Row
+        stats_layout = QHBoxLayout()
+        stats_layout.setSpacing(20)
+        
+        self.netWorthCard = StatCard("Net Worth", 0.0)
+        self.incomeCard = StatCard("Monthly Income", 0.0, color="#a6e3a1")
+        self.expenseCard = StatCard("Monthly Expenses", 0.0, color="#f38ba8")
+        
+        stats_layout.addWidget(self.netWorthCard)
+        stats_layout.addWidget(self.incomeCard)
+        stats_layout.addWidget(self.expenseCard)
+        stats_layout.addStretch()
+        
+        layout.addLayout(stats_layout)
+
+        # 2. Accounts Section Header
+        acc_header_layout = QHBoxLayout()
+        acc_title = QLabel("Your Accounts")
+        acc_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #cdd6f4; margin-top: 10px;")
+        acc_header_layout.addWidget(acc_title)
+        acc_header_layout.addStretch()
         
         self.addAccBtn = QPushButton("+ Add Account")
         self.addAccBtn.setObjectName("ActionBtn")
         self.addAccBtn.clicked.connect(self.open_add_account_dialog)
-        actions_layout.addWidget(self.addAccBtn)
+        acc_header_layout.addWidget(self.addAccBtn)
         
-        actions_layout.addStretch()
+        layout.addLayout(acc_header_layout)
 
-        # View Toggle Button
-        self.viewToggleBtn = QPushButton("List View")
-        self.viewToggleBtn.setCheckable(True)
-        self.viewToggleBtn.clicked.connect(self.toggle_view_mode)
-        actions_layout.addWidget(self.viewToggleBtn)
-
-        layout.addLayout(actions_layout)
-
-        # Accounts Grid (Scroll Area)
+        # 3. Accounts List (Scroll Area)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         
         self.accScrollWidget = QWidget()
         self.accScrollWidget.setObjectName("AccountContainer")
-        # Default to Grid (QHBoxLayout)
-        self.accounts_layout = QHBoxLayout(self.accScrollWidget)
-        self.accounts_layout.setAlignment(Qt.AlignLeft)
-        self.accounts_layout.setSpacing(20)
+        
+        # Now permanently a List View (Vertical)
+        self.accounts_layout = QVBoxLayout(self.accScrollWidget)
+        self.accounts_layout.setAlignment(Qt.AlignTop)
+        self.accounts_layout.setSpacing(10)
         
         scroll.setWidget(self.accScrollWidget)
-        
         layout.addWidget(scroll)
 
-    def toggle_view_mode(self):
-        # Switch mode
-        if self.view_mode == "grid":
-            self.view_mode = "list"
-            self.viewToggleBtn.setText("Grid View")
-        else:
-            self.view_mode = "grid"
-            self.viewToggleBtn.setText("List View")
+    def _load_accounts(self):
+        """Loads accounts and refreshes stats."""
+        # 1. Update Stats
+        summary = self.controller.get_monthly_summary()
+        self.netWorthCard.updateValue(summary["net_worth"])
+        self.incomeCard.updateValue(summary["income"])
+        self.expenseCard.updateValue(summary["expenses"])
 
-        # Replace Layout
-        # 1. Clear existing layout items
+        # 2. Update Accounts List
         while self.accounts_layout.count():
             item = self.accounts_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        
-        # 2. Delete the layout itself by re-parenting to a temp widget
-        QWidget().setLayout(self.accounts_layout)
-        
-        # 3. Create new layout
-        if self.view_mode == "list":
-            self.accounts_layout = QVBoxLayout(self.accScrollWidget)
-            self.accounts_layout.setAlignment(Qt.AlignTop)
-            self.accounts_layout.setSpacing(10)
-        else:
-            self.accounts_layout = QHBoxLayout(self.accScrollWidget)
-            self.accounts_layout.setAlignment(Qt.AlignLeft)
-            self.accounts_layout.setSpacing(20)
-            
-        # 4. Reload Items
-        self._load_accounts()
+
+        accounts = self.controller.get_all_accounts()
+        for acc in accounts:
+            self._create_account_card(acc.id, acc.name, acc.balance)
+
+    def _create_account_card(self, account_id, name, balance):
+        card = AccountCard(account_id, name, balance)
+        card.set_view_mode("list") # Always list view now
+        card.editRequested.connect(self._edit_account)
+        card.deleteRequested.connect(self._delete_account)
+        self.accounts_layout.addWidget(card)
 
     def setup_transactions_view(self):
         self.transWidget = QWidget()
@@ -246,27 +251,7 @@ class HomeScreen(QDialog):
             
             self.transListLayout.addWidget(row)
 
-    def _load_accounts(self):
-        """Loads accounts from the database and displays them."""
-        # Clear existing
-        while self.accounts_layout.count():
-            item = self.accounts_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
 
-        accounts = self.controller.get_all_accounts()
-        for acc in accounts:
-            self._create_account_card(acc.id, acc.name, acc.balance)
-
-    def _create_account_card(self, account_id, name, balance):
-        # We need to make sure AccountCard can fit in the layout
-        # Assuming AccountCard is a custom widget
-        card = AccountCard(account_id, name, balance)
-        card.set_view_mode(self.view_mode)
-        # card.setFixedSize(200, 150) # Optional: enforce size
-        card.editRequested.connect(self._edit_account)
-        card.deleteRequested.connect(self._delete_account)
-        self.accounts_layout.addWidget(card)
 
     # REMOVED OLD METHODS TO AVOID CONFLICTS
     # show_home_view, show_transactions_view, existing __init__ logic...

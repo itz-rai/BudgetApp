@@ -77,6 +77,33 @@ class MainController:
         from models import Transaction # Import here to avoid circular dependency if any
         return [Transaction.from_dict(row) for row in data]
 
+    def get_monthly_summary(self):
+        """Calculates Net Worth, Monthly Expenses, and Monthly Income."""
+        # 1. Net Worth: Sum of all account balances
+        net_worth_data = self.db.fetch_one("SELECT SUM(balance) as total FROM accounts")
+        net_worth = net_worth_data["total"] if net_worth_data and net_worth_data["total"] is not None else 0.0
+
+        # Current month/year for filtering
+        from datetime import datetime
+        now = datetime.now()
+        month_str = now.strftime("%Y-%m") # Matches YYYY-MM prefix in ISO dates
+
+        # 2. Monthly Income
+        income_query = "SELECT SUM(amount) as total FROM transactions WHERE type = 'Income' AND date LIKE ?"
+        income_data = self.db.fetch_one(income_query, (f"{month_str}%",))
+        income = income_data["total"] if income_data and income_data["total"] is not None else 0.0
+
+        # 3. Monthly Expenses
+        expense_query = "SELECT SUM(amount) as total FROM transactions WHERE type = 'Expense' AND date LIKE ?"
+        expense_data = self.db.fetch_one(expense_query, (f"{month_str}%",))
+        expense = expense_data["total"] if expense_data and expense_data["total"] is not None else 0.0
+
+        return {
+            "net_worth": net_worth,
+            "income": income,
+            "expenses": expense
+        }
+
     def get_unique_categories(self):
         """Fetches distinct categories from transactions combined with defaults."""
         defaults = {"Food", "Rent", "Salary", "Entertainment", "Transport", "Shopping", "Utilities", "Health"}

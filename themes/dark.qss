@@ -117,6 +117,25 @@ QLabel#AccountBalance {
     font-weight: bold;
 }
 
+/* Stat Card Specifics */
+QFrame#StatCard {
+    background-color: #313244;
+    border: 1px solid #45475a;
+    border-radius: 12px;
+}
+
+QLabel#StatTitle {
+    color: #a6adc8;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QLabel#StatValue {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
 /* Transaction List Rows */
 QFrame#TransactionRow {
     background-color: #313244;
