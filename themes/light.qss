@@ -93,6 +93,23 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
 }
 
+QScrollBar:horizontal {
+    border: none;
+    background: #f0f0f0;
+    height: 8px;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    background: #cccccc;
+    min-width: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
 /* Account Card Specifics */
 QFrame#AccountCard {
     background-color: #ffffff;
@@ -156,11 +173,12 @@ QWidget#AccountContainer, QWidget#TransactionsContainer, /* Transactions TabBar 
 QTabBar::tab {
     background-color: #ffffff;
     color: #555555;
-    padding: 8px 15px;
+    padding: 10px 20px;
     border-radius: 6px;
     border: 1px solid #d0d0d0;
-    margin-right: 8px;
-    font-size: 13px;
+    margin-right: 12px;
+    font-size: 14px;
+    min-width: 80px;
 }
 
 QTabBar::tab:selected {
@@ -178,6 +196,11 @@ QFrame#TransSummaryRow {
     background-color: #f9f9f9;
     border: 1px solid #d0d0d0;
     border-radius: 10px;
+}
+
+QScrollArea#MonthTabsScroll, QScrollArea#MonthTabsScroll > QWidget, QScrollArea#MonthTabsScroll > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
 }
 
 QWidget#CalendarContainer {

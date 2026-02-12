@@ -205,6 +205,7 @@ class HomeScreen(QDialog):
         
         # Scroll area for tabs if they get too many
         tabs_scroll = QScrollArea()
+        tabs_scroll.setObjectName("MonthTabsScroll")
         tabs_scroll.setFixedHeight(45)
         tabs_scroll.setWidgetResizable(True)
         tabs_scroll.setFrameShape(QFrame.NoFrame)
