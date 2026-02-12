@@ -34,6 +34,11 @@ class HomeScreen(QDialog):
         # 4. Transactions View
         self.setup_transactions_view()
         self.contentArea.addWidget(self.transWidget)
+
+        # 5. Calendar View (Placeholder)
+        self.calendarWidget = QWidget()
+        self.calendarWidget.setObjectName("CalendarContainer")
+        self.contentArea.addWidget(self.calendarWidget)
         
         # Initialize Controller
         self.controller = MainController()
@@ -61,7 +66,7 @@ class HomeScreen(QDialog):
         self.nav_btns = []
         self.add_nav_btn(layout, "Dashboard", lambda: self.switch_view(0))
         self.add_nav_btn(layout, "Transactions", lambda: self.switch_view(1))
-        self.add_nav_btn(layout, "Calendar", lambda: print("Calendar Clicked")) # Placeholder
+        self.add_nav_btn(layout, "Calendar", lambda: self.switch_view(2))
 
         layout.addStretch()
 
@@ -194,9 +199,11 @@ class HomeScreen(QDialog):
 
         # Transaction List (Scroll Area)
         self.transList = QScrollArea()
+        self.transList.setObjectName("TransactionsScroll")
         self.transList.setWidgetResizable(True)
         self.transList.setFrameShape(QFrame.NoFrame)
         self.transListContent = QWidget()
+        self.transListContent.setObjectName("TransactionsContainer")
         self.transListLayout = QVBoxLayout(self.transListContent)
         self.transListLayout.setAlignment(Qt.AlignTop)
         self.transListLayout.setSpacing(10)

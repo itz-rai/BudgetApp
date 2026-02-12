@@ -151,6 +151,6 @@ QScrollArea {
     border: none;
 }
 
-QWidget#AccountContainer {
+QWidget#AccountContainer, QWidget#TransactionsContainer, QWidget#CalendarContainer {
     background-color: transparent;
 }
