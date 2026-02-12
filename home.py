@@ -142,13 +142,17 @@ class HomeScreen(QDialog):
         scroll.setWidget(self.accScrollWidget)
         layout.addWidget(scroll)
 
-    def _load_accounts(self):
-        """Loads accounts and refreshes stats."""
-        # 1. Update Stats
+    def _refresh_stats(self):
+        """Refreshes the summary statistics at the top of the dashboard."""
         summary = self.controller.get_monthly_summary()
         self.netWorthCard.updateValue(summary["net_worth"])
         self.incomeCard.updateValue(summary["income"])
         self.expenseCard.updateValue(summary["expenses"])
+
+    def _load_accounts(self):
+        """Loads accounts and refreshes stats."""
+        # 1. Update Stats
+        self._refresh_stats()
 
         # 2. Update Accounts List
         while self.accounts_layout.count():
@@ -276,6 +280,7 @@ class HomeScreen(QDialog):
         new_acc = self.controller.add_account(name, balance)
         if new_acc:
             self._create_account_card(new_acc.id, new_acc.name, new_acc.balance)
+            self._refresh_stats()
 
     def _edit_account(self, account_id: str):
         
@@ -296,6 +301,7 @@ class HomeScreen(QDialog):
                     widget = item.widget()
                     if isinstance(widget, AccountCard) and widget.account_id == account_id:
                         widget.updateData(name, balance)
+                        self._refresh_stats()
                         break
 
     def open_add_transaction_dialog(self):
@@ -346,6 +352,7 @@ class HomeScreen(QDialog):
                     self.accounts_layout.removeWidget(widget)
                     widget.setParent(None)
                     widget.deleteLater()
+                    self._refresh_stats()
                     break
 
 
