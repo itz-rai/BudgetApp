@@ -13,3 +13,6 @@ class Account:
             name=data.get("name"),
             balance=data.get("balance", 0.0)
         )
+
+# Re-export Transaction
+from models_transaction import Transaction

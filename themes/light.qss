@@ -1,7 +1,7 @@
 /* Light Mode Theme */
 QMainWindow, QDialog {
-    background-color: #f3f3f3;
-    color: #000000;
+    background-color: #f0f0f0;
+    color: #333333;
 }
 
 QLabel {
@@ -10,76 +10,119 @@ QLabel {
     font-size: 14px;
 }
 
+/* Sidebar Styling */
+QFrame#Sidebar {
+    background-color: #ffffff;
+    border-right: 1px solid #d0d0d0;
+}
+
+/* Navigation Buttons */
+QPushButton#NavButton {
+    background-color: transparent;
+    color: #555555;
+    border: none;
+    text-align: left;
+    padding: 15px 20px;
+    font-size: 16px;
+    border-radius: 0px;
+}
+
+QPushButton#NavButton:hover {
+    background-color: #e0e0e0;
+    color: #000000;
+}
+
+QPushButton#NavButton:checked {
+    background-color: #e0e0e0;
+    color: #007acc;
+    border-left: 4px solid #007acc;
+}
+
+/* Action Buttons */
+QPushButton#ActionBtn {
+    background-color: #007acc;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+QPushButton#ActionBtn:hover {
+    background-color: #005a9e;
+}
+
+/* General Buttons */
 QPushButton {
     background-color: #ffffff;
     color: #333333;
     border: 1px solid #cccccc;
     border-radius: 6px;
     padding: 6px 12px;
-    font-size: 13px;
 }
 
-QPushButton:hover {
-    background-color: #f0f0f0;
-    border-color: #bbbbbb;
-}
-
-QPushButton:pressed {
-    background-color: #e0e0e0;
-}
-
-QLineEdit {
+/* Input Fields */
+QLineEdit, QComboBox, QDateEdit {
     background-color: #ffffff;
-    color: #000000;
+    color: #333333;
     border: 1px solid #cccccc;
-    border-radius: 4px;
-    padding: 4px;
-    selection-background-color: #0078d4;
-    selection-color: #ffffff;
+    border-radius: 6px;
+    padding: 8px;
 }
 
-QLineEdit:focus {
-    border: 1px solid #0078d4;
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+    border: 1px solid #007acc;
 }
 
 /* ScrollBar Styling */
 QScrollBar:vertical {
     border: none;
-    background: #f3f3f3;
-    width: 10px;
-    margin: 0px 0px 0px 0px;
+    background: #f0f0f0;
+    width: 8px;
+    margin: 0;
 }
 
 QScrollBar::handle:vertical {
     background: #cccccc;
     min-height: 20px;
-    border-radius: 5px;
+    border-radius: 4px;
 }
 
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    background: none;
     height: 0px;
 }
 
 /* Account Card Specifics */
 QFrame#AccountCard {
     background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 12px;
 }
 
 QFrame#AccountCard:hover {
-    border: 1px solid #0078d4;
+    border: 1px solid #007acc;
+    background-color: #f9f9f9;
 }
 
 QLabel#AccountName {
     font-weight: bold;
-    font-size: 16px;
+    font-size: 18px;
     color: #333333;
 }
 
 QLabel#AccountBalance {
-    font-size: 18px;
-    color: #107c10; /* Dark green */
+    font-size: 20px;
+    color: #009900; /* Darker Green */
     font-weight: bold;
+}
+
+/* Transaction List Rows */
+QFrame#TransactionRow {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+QFrame#TransactionRow:hover {
+    background-color: #f5f5f5;
 }
