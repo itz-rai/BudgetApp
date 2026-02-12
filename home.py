@@ -180,7 +180,7 @@ class HomeScreen(QDialog):
         self.transWidget = QWidget()
         layout = QVBoxLayout(self.transWidget)
         layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
+        layout.setSpacing(15)
 
         # Header Row
         header_layout = QHBoxLayout()
@@ -194,10 +194,47 @@ class HomeScreen(QDialog):
         self.addTransBtn.setObjectName("ActionBtn")
         self.addTransBtn.clicked.connect(self.open_add_transaction_dialog)
         header_layout.addWidget(self.addTransBtn)
-        
         layout.addLayout(header_layout)
 
-        # Transaction List (Scroll Area)
+        # 1. Month Tabs
+        from PySide2.QtWidgets import QTabBar
+        self.monthTabs = QTabBar()
+        self.monthTabs.setExpanding(False)
+        self.monthTabs.setDrawBase(False)
+        self.monthTabs.currentChanged.connect(self._on_month_tab_changed)
+        
+        # Scroll area for tabs if they get too many
+        tabs_scroll = QScrollArea()
+        tabs_scroll.setFixedHeight(45)
+        tabs_scroll.setWidgetResizable(True)
+        tabs_scroll.setFrameShape(QFrame.NoFrame)
+        tabs_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        tabs_scroll.setWidget(self.monthTabs)
+        layout.addWidget(tabs_scroll)
+
+        # 2. Monthly Summary Row
+        summary_frame = QFrame()
+        summary_frame.setObjectName("TransSummaryRow")
+        summary_layout = QHBoxLayout(summary_frame)
+        summary_layout.setContentsMargins(20, 10, 20, 10)
+        
+        self.monthIncomeLbl = QLabel("Income: $0.00")
+        self.monthIncomeLbl.setStyleSheet("color: #a6e3a1; font-weight: bold; font-size: 16px;")
+        self.monthExpenseLbl = QLabel("Expenses: $0.00")
+        self.monthExpenseLbl.setStyleSheet("color: #f38ba8; font-weight: bold; font-size: 16px;")
+        self.monthNetLbl = QLabel("Net Income: $0.00")
+        self.monthNetLbl.setStyleSheet("color: white; font-weight: bold; font-size: 16px;")
+        
+        summary_layout.addWidget(self.monthIncomeLbl)
+        summary_layout.addSpacing(40)
+        summary_layout.addWidget(self.monthExpenseLbl)
+        summary_layout.addSpacing(40)
+        summary_layout.addWidget(self.monthNetLbl)
+        summary_layout.addStretch()
+        
+        layout.addWidget(summary_frame)
+
+        # 3. Transaction List (Scroll Area)
         self.transList = QScrollArea()
         self.transList.setObjectName("TransactionsScroll")
         self.transList.setWidgetResizable(True)
@@ -214,24 +251,80 @@ class HomeScreen(QDialog):
     def switch_view(self, index):
         self.contentArea.setCurrentIndex(index)
         if index == 1: # Transactions
-            self._load_transactions()
+            self._setup_month_tabs()
+            self._on_month_tab_changed()
         
         # Update Nav State
         for i, btn in enumerate(self.nav_btns):
             btn.setChecked(i == index)
 
-    def _load_transactions(self):
+    def _setup_month_tabs(self):
+        """Calculates and populates the month tabs."""
+        self.monthTabs.blockSignals(True)
+        # QTabBar does not have clear(), must remove individually
+        while self.monthTabs.count() > 0:
+            self.monthTabs.removeTab(0)
+        
+        from datetime import datetime
+        first_date, now = self.controller.get_transaction_date_range()
+        
+        # Start from the first of the first month
+        curr_year = first_date.year
+        curr_month = first_date.month
+        
+        # End 10 months from now
+        target_months = (now.year * 12 + now.month) + 10
+        
+        while (curr_year * 12 + curr_month) <= target_months:
+            m_date = datetime(curr_year, curr_month, 1)
+            tab_text = m_date.strftime("%b %Y")
+            tab_data = m_date.strftime("%Y-%m")
+            self.monthTabs.addTab(tab_text)
+            self.monthTabs.setTabData(self.monthTabs.count()-1, tab_data)
+            
+            curr_month += 1
+            if curr_month > 12:
+                curr_month = 1
+                curr_year += 1
+        
+        # Select current month by default
+        current_str = now.strftime("%Y-%m")
+        for i in range(self.monthTabs.count()):
+            if self.monthTabs.tabData(i) == current_str:
+                self.monthTabs.setCurrentIndex(i)
+                break
+        
+        self.monthTabs.blockSignals(False)
+
+    def _on_month_tab_changed(self):
+        index = self.monthTabs.currentIndex()
+        if index == -1: return
+        month_str = self.monthTabs.tabData(index)
+        self._load_transactions(month_str)
+        self._refresh_monthly_summary(month_str)
+
+    def _refresh_monthly_summary(self, month_str):
+        summary = self.controller.get_monthly_summary(month_str)
+        self.monthIncomeLbl.setText(f"Income: ${summary['income']:,.2f}")
+        self.monthExpenseLbl.setText(f"Expenses: ${summary['expenses']:,.2f}")
+        self.monthNetLbl.setText(f"Net Income: ${summary['net_income']:,.2f}")
+        
+        color = "#a6e3a1" if summary['net_income'] >= 0 else "#f38ba8"
+        self.monthNetLbl.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 16px;")
+
+    def _load_transactions(self, month_str=None):
         # Clear existing
         while self.transListLayout.count():
             item = self.transListLayout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
                 
-        transactions = self.controller.get_transactions()
+        transactions = self.controller.get_transactions(month_str=month_str)
         
         for t in transactions:
             row = QFrame()
             row.setObjectName("TransactionRow")
+            row.setCursor(Qt.PointingHandCursor)
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(15, 10, 15, 10)
             
@@ -260,7 +353,37 @@ class HomeScreen(QDialog):
             row_layout.addStretch()
             row_layout.addWidget(amount_lbl)
             
+            # Connect row click to edit
+            row.mousePressEvent = lambda e, tid=t.id: self._edit_transaction(tid)
+            
             self.transListLayout.addWidget(row)
+
+    def _edit_transaction(self, transaction_id):
+        # Find transaction data
+        all_t = self.controller.get_transactions()
+        t = next((item for item in all_t if item.id == transaction_id), None)
+        if not t: return
+
+        # Open Dialog
+        accounts = self.controller.get_all_accounts()
+        categories = self.controller.get_unique_categories()
+        
+        initial_data = {
+            "account_id": t.account_id,
+            "date": t.date,
+            "amount": t.amount,
+            "type": t.type,
+            "category": t.category,
+            "note": t.note
+        }
+        
+        dlg = AddTransactionDialog(self, accounts=accounts, categories=categories, initial_data=initial_data)
+        if dlg.exec_():
+            updated_data = dlg.get_result()
+            if updated_data and self.controller.update_transaction(transaction_id, updated_data):
+                self._on_month_tab_changed()
+                self._refresh_stats() # Update Net Worth on dashboard too
+                QMessageBox.information(self, "Success", "Transaction updated!")
 
 
 

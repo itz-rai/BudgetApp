@@ -3,10 +3,12 @@ from PySide2.QtWidgets import (QDialog, QVBoxLayout, QPushButton,
 from PySide2.QtCore import QDate, Qt
 
 class AddTransactionDialog(QDialog):
-    def __init__(self, parent=None, accounts=None, categories=None):
+    def __init__(self, parent=None, accounts=None, categories=None, initial_data=None):
         super().__init__(parent)
-        self.setWindowTitle("Add Transaction")
-        self.setFixedSize(350, 450)
+        self.initial_data = initial_data
+        self.setWindowTitle("Edit Transaction" if initial_data else "Add Transaction")
+        self.setFixedSize(350, 480)
+        # ... styles ...
         self.setStyleSheet("""
             QDialog { background-color: #2b2b2b; color: white; }
             QLabel { font-size: 14px; margin-top: 8px; }
@@ -31,25 +33,37 @@ class AddTransactionDialog(QDialog):
         self.account_combo = QComboBox()
         for acc in self.accounts:
             self.account_combo.addItem(acc.name, acc.id)
+        
+        if initial_data:
+            idx = self.account_combo.findData(initial_data["account_id"])
+            if idx != -1: self.account_combo.setCurrentIndex(idx)
+        
         layout.addWidget(self.account_combo)
 
         # Date
         layout.addWidget(QLabel("Date"))
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
-        self.date_input.setDate(QDate.currentDate())
+        if initial_data:
+            self.date_input.setDate(QDate.fromString(initial_data["date"], "yyyy-MM-dd"))
+        else:
+            self.date_input.setDate(QDate.currentDate())
         layout.addWidget(self.date_input)
 
         # Amount
         layout.addWidget(QLabel("Amount"))
         self.amount_input = QLineEdit()
         self.amount_input.setPlaceholderText("0.00")
+        if initial_data:
+            self.amount_input.setText(str(initial_data["amount"]))
         layout.addWidget(self.amount_input)
 
         # Type (Income/Expense)
         layout.addWidget(QLabel("Type"))
         self.type_combo = QComboBox()
         self.type_combo.addItems(["Expense", "Income"])
+        if initial_data:
+            self.type_combo.setCurrentText(initial_data["type"])
         layout.addWidget(self.type_combo)
 
         # Category
@@ -57,17 +71,21 @@ class AddTransactionDialog(QDialog):
         self.category_input = QComboBox()
         self.category_input.setEditable(True)
         self.category_input.addItems(self.categories)
+        if initial_data:
+            self.category_input.setCurrentText(initial_data["category"])
         layout.addWidget(self.category_input)
 
         # Note
         layout.addWidget(QLabel("Note (Optional)"))
         self.note_input = QLineEdit()
+        if initial_data:
+            self.note_input.setText(initial_data["note"])
         layout.addWidget(self.note_input)
 
         layout.addStretch()
 
         # Save Button
-        self.save_btn = QPushButton("Save Transaction")
+        self.save_btn = QPushButton("Update Transaction" if initial_data else "Save Transaction")
         self.save_btn.clicked.connect(self.save)
         layout.addWidget(self.save_btn)
 

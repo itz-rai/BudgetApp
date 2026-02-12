@@ -151,6 +151,33 @@ QScrollArea {
     border: none;
 }
 
-QWidget#AccountContainer, QWidget#TransactionsContainer, QWidget#CalendarContainer {
+QWidget#AccountContainer, QWidget#TransactionsContainer, /* Transactions TabBar Styling */
+QTabBar::tab {
+    background-color: #313244;
+    color: #a6adc8;
+    padding: 8px 15px;
+    border-radius: 6px;
+    margin-right: 8px;
+    font-size: 13px;
+}
+
+QTabBar::tab:selected {
+    background-color: #89b4fa;
+    color: #1e1e2e;
+    font-weight: bold;
+}
+
+QTabBar::tab:hover {
+    background-color: #45475a;
+}
+
+/* Trans Summary Row Styling */
+QFrame#TransSummaryRow {
+    background-color: #1e1e2e;
+    border: 1px solid #313244;
+    border-radius: 10px;
+}
+
+QWidget#CalendarContainer {
     background-color: transparent;
 }
