@@ -217,3 +217,21 @@ class MainController:
         """
         data = self.db.fetch_all(query, (f"{month_str}%",))
         return {row["category"]: row["total"] for row in data if row["total"] is not None}
+
+    def get_report_data(self, month_str: str):
+        """Aggregates all data needed for a monthly report."""
+        print(f"DEBUG: Aggregating report data for {month_str}")
+        summary = self.get_monthly_summary(month_str)
+        categories = self.get_category_spending(month_str)
+        transactions = self.get_transactions(month_str=month_str)
+        accounts = self.get_all_accounts()
+        
+        print(f"DEBUG: Found {len(transactions)} transactions and {len(categories)} categories for {month_str}")
+        
+        return {
+            "month": month_str,
+            "summary": summary,
+            "categories": categories,
+            "transactions": transactions,
+            "accounts": accounts
+        }

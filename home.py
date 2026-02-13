@@ -1,7 +1,7 @@
 import uuid
 from PySide2.QtWidgets import (QDialog, QMessageBox, QApplication, QPushButton, 
                                QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame,
-                               QStackedWidget, QCalendarWidget, QTabBar)
+                               QStackedWidget, QCalendarWidget, QTabBar, QFileDialog)
 from PySide2.QtCore import Qt, QRectF
 from PySide2.QtGui import QPainter, QColor
 from PySide2.QtCharts import QtCharts
@@ -307,6 +307,25 @@ class HomeScreen(QDialog):
         self.addTransBtn.setObjectName("ActionBtn")
         self.addTransBtn.clicked.connect(self.open_add_transaction_dialog)
         header_layout.addWidget(self.addTransBtn)
+
+        self.exportPdfBtn = QPushButton("Export PDF")
+        self.exportPdfBtn.setObjectName("ActionBtn")
+        # Match ActionBtn style but with a distinct, solid blue
+        self.exportPdfBtn.setStyleSheet("""
+            QPushButton#ActionBtn {
+                background-color: #3e8ed0;
+                color: white;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: bold;
+            }
+            QPushButton#ActionBtn:hover {
+                background-color: #4da3e0;
+            }
+        """)
+        self.exportPdfBtn.clicked.connect(self._export_monthly_report)
+        header_layout.addWidget(self.exportPdfBtn)
+
         layout.addLayout(header_layout)
 
         # 1. Month Tabs
@@ -759,6 +778,38 @@ class HomeScreen(QDialog):
                     widget.deleteLater()
                     self._refresh_stats()
                     break
+
+    def _export_monthly_report(self):
+        """Triggers the PDF export engine for the currently selected month."""
+        from export_engine import PDFExporter
+        
+        # Determine month from tabs
+        index = self.monthTabs.currentIndex()
+        if index == -1:
+            QMessageBox.warning(self, "Error", "No month selected.")
+            return
+            
+        month_str = self.monthTabs.tabData(index)
+        
+        # Save File Dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Monthly Report", 
+            f"Budget_Report_{month_str}.pdf",
+            "PDF Files (*.pdf)"
+        )
+        
+        if file_path:
+            try:
+                data = self.controller.get_report_data(month_str)
+                # Debug Check
+                print(f"Exporting {month_str}: {len(data['transactions'])} transactions found.")
+                
+                if PDFExporter.export_monthly_report(data, file_path):
+                    QMessageBox.information(self, "Success", f"Report saved successfully to:\n{file_path}")
+                else:
+                    QMessageBox.critical(self, "Error", "Failed to generate PDF report.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error during export: {str(e)}")
 
 
 
