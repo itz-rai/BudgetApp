@@ -1,9 +1,11 @@
 import uuid
 from PySide2.QtWidgets import (QDialog, QMessageBox, QApplication, QPushButton, 
                                QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame,
-                               QStackedWidget, QCalendarWidget)
+                               QStackedWidget, QCalendarWidget, QTabBar)
 from PySide2.QtCore import Qt, QRectF
 from PySide2.QtGui import QPainter, QColor
+from PySide2.QtCharts import QtCharts
+from datetime import datetime
 from add_account_dialog import AddAccountDialog
 from add_transaction_dialog import AddTransactionDialog
 from account_card import AccountCard
@@ -89,6 +91,10 @@ class HomeScreen(QDialog):
         self.setup_calendar_view()
         self.contentArea.addWidget(self.calendarTab)
 
+        # 6. Categories View
+        self.setup_categories_view()
+        self.contentArea.addWidget(self.categoriesTab)
+
         # Load Data
         self._load_accounts()
         
@@ -116,6 +122,7 @@ class HomeScreen(QDialog):
         self.nav_btns = []
         self.add_nav_btn(layout, "Dashboard", lambda: self.switch_view(0))
         self.add_nav_btn(layout, "Transactions", lambda: self.switch_view(1))
+        self.add_nav_btn(layout, "Categories", lambda: self.switch_view(3))
         self.add_nav_btn(layout, "Calendar", lambda: self.switch_view(2))
 
         layout.addStretch()
@@ -204,11 +211,61 @@ class HomeScreen(QDialog):
         layout.addWidget(scroll)
 
     def _refresh_stats(self):
-        """Refreshes the summary statistics at the top of the dashboard."""
+        """Refreshes the summary statistics at the top of the dashboard and charts."""
         summary = self.controller.get_monthly_summary()
         self.netWorthCard.updateValue(summary["net_worth"])
         self.incomeCard.updateValue(summary["income"])
         self.expenseCard.updateValue(summary["expenses"])
+
+    def _refresh_charts(self):
+        """Populates the category spending pie chart based on selected month tab."""
+        if not hasattr(self, 'categoryMonthTabs'):
+            month_str = datetime.now().strftime("%Y-%m")
+        else:
+            index = self.categoryMonthTabs.currentIndex()
+            month_str = self.categoryMonthTabs.tabData(index) if index != -1 else datetime.now().strftime("%Y-%m")
+        
+        spending_data = self.controller.get_category_spending(month_str)
+        
+        series = QtCharts.QPieSeries()
+        total_expense = sum(spending_data.values())
+        
+        if not spending_data:
+            # Show empty state
+            chart = QtCharts.QChart()
+            chart.setTitle("No expense data for this month")
+            chart.setTitleBrush(QColor("#a6adc8"))
+            chart.setBackgroundBrush(Qt.NoBrush)
+            self.pie_chart_view.setChart(chart)
+            return
+
+        # Color palette (Catppuccin inspired vibrant colors)
+        colors = ["#89b4fa", "#a6e3a1", "#f9e2af", "#fab387", "#eba0ac", "#f5c2e7", "#cba6f7", "#94e2d5"]
+        
+        for i, (cat, amount) in enumerate(spending_data.items()):
+            percentage = (amount / total_expense * 100) if total_expense > 0 else 0
+            label = f"{cat}: ${amount:,.2f} ({percentage:.1f}%)"
+            p_slice = series.append(label, amount)
+            p_slice.setLabelVisible(True)
+            p_slice.setBrush(QColor(colors[i % len(colors)]))
+            p_slice.setLabelColor(QColor("#cdd6f4"))
+            
+        chart = QtCharts.QChart()
+        chart.addSeries(series)
+        chart.setTitle("Monthly Category Spending")
+        chart.setTitleBrush(QColor("#cdd6f4"))
+        font = chart.titleFont()
+        font.setPointSize(16)
+        font.setBold(True)
+        chart.setTitleFont(font)
+        
+        chart.setBackgroundBrush(Qt.NoBrush)
+        chart.setAnimationOptions(QtCharts.QChart.SeriesAnimations)
+        
+        chart.legend().setAlignment(Qt.AlignRight)
+        chart.legend().setLabelColor(QColor("#cdd6f4"))
+        
+        self.pie_chart_view.setChart(chart)
 
     def _load_accounts(self):
         """Loads accounts and refreshes stats."""
@@ -253,7 +310,6 @@ class HomeScreen(QDialog):
         layout.addLayout(header_layout)
 
         # 1. Month Tabs
-        from PySide2.QtWidgets import QTabBar
         self.monthTabs = QTabBar()
         self.monthTabs.setExpanding(False)
         self.monthTabs.setDrawBase(False)
@@ -352,6 +408,47 @@ class HomeScreen(QDialog):
         
         layout.addWidget(right_panel, stretch=1)
 
+    def setup_categories_view(self):
+        self.categoriesTab = QWidget()
+        layout = QVBoxLayout(self.categoriesTab)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
+
+        header = QLabel("Category Spending")
+        header.setStyleSheet("font-size: 28px; font-weight: bold; color: #cdd6f4;")
+        layout.addWidget(header)
+
+        # Month Tabs (Same style as Transactions)
+        self.categoryMonthTabs = QTabBar()
+        self.categoryMonthTabs.setExpanding(False)
+        self.categoryMonthTabs.setDrawBase(False)
+        self.categoryMonthTabs.currentChanged.connect(self._refresh_charts)
+        
+        tabs_scroll = QScrollArea()
+        tabs_scroll.setObjectName("MonthTabsScroll")
+        tabs_scroll.setFixedHeight(45)
+        tabs_scroll.setWidgetResizable(True)
+        tabs_scroll.setFrameShape(QFrame.NoFrame)
+        
+        tabs_scroll.setWidget(self.categoryMonthTabs)
+        layout.addWidget(tabs_scroll)
+
+        # Charts Section
+        self.charts_container = QWidget()
+        self.charts_layout = QHBoxLayout(self.charts_container)
+        self.charts_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.pie_chart_view = QtCharts.QChartView()
+        self.pie_chart_view.setRenderHint(QPainter.Antialiasing)
+        self.pie_chart_view.setStyleSheet("background: transparent;")
+        
+        self.charts_layout.addWidget(self.pie_chart_view)
+        layout.addWidget(self.charts_container)
+        
+        # Initial chart load
+        self._populate_month_tabs(self.categoryMonthTabs)
+        self._refresh_charts()
+
     def _on_calendar_date_changed(self):
         date = self.calendar.selectedDate()
         date_str = date.toString("yyyy-MM-dd")
@@ -405,24 +502,26 @@ class HomeScreen(QDialog):
     def switch_view(self, index):
         self.contentArea.setCurrentIndex(index)
         if index == 1: # Transactions
-            self._setup_month_tabs()
+            self._populate_month_tabs(self.monthTabs)
             self._on_month_tab_changed()
         elif index == 2: # Calendar
             self.calendar.update_summary(self.calendar.yearShown(), self.calendar.monthShown()) # Refresh markers
             self._on_calendar_date_changed() # Load transactions for selected day
+        elif index == 3: # Categories
+            self._populate_month_tabs(self.categoryMonthTabs)
+            self._refresh_charts()
         
         # Update Nav State
         for i, btn in enumerate(self.nav_btns):
             btn.setChecked(i == index)
 
-    def _setup_month_tabs(self):
-        """Calculates and populates the month tabs."""
-        self.monthTabs.blockSignals(True)
+    def _populate_month_tabs(self, tab_bar):
+        """Calculates and populates the given tab bar with month options."""
+        tab_bar.blockSignals(True)
         # QTabBar does not have clear(), must remove individually
-        while self.monthTabs.count() > 0:
-            self.monthTabs.removeTab(0)
+        while tab_bar.count() > 0:
+            tab_bar.removeTab(0)
         
-        from datetime import datetime
         first_date, now = self.controller.get_transaction_date_range()
         
         # Start from the first of the first month
@@ -436,8 +535,8 @@ class HomeScreen(QDialog):
             m_date = datetime(curr_year, curr_month, 1)
             tab_text = m_date.strftime("%b %Y")
             tab_data = m_date.strftime("%Y-%m")
-            self.monthTabs.addTab(tab_text)
-            self.monthTabs.setTabData(self.monthTabs.count()-1, tab_data)
+            tab_bar.addTab(tab_text)
+            tab_bar.setTabData(tab_bar.count()-1, tab_data)
             
             curr_month += 1
             if curr_month > 12:
@@ -446,12 +545,12 @@ class HomeScreen(QDialog):
         
         # Select current month by default
         current_str = now.strftime("%Y-%m")
-        for i in range(self.monthTabs.count()):
-            if self.monthTabs.tabData(i) == current_str:
-                self.monthTabs.setCurrentIndex(i)
+        for i in range(tab_bar.count()):
+            if tab_bar.tabData(i) == current_str:
+                tab_bar.setCurrentIndex(i)
                 break
         
-        self.monthTabs.blockSignals(False)
+        tab_bar.blockSignals(False)
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts."""

@@ -206,3 +206,14 @@ class MainController:
         used = {row["category"] for row in data if row["category"]}
         
         return sorted(list(defaults.union(used)))
+
+    def get_category_spending(self, month_str: str):
+        """Returns a dict of {category: total_amount} for expenses in a given month."""
+        query = """
+            SELECT category, SUM(amount) as total 
+            FROM transactions 
+            WHERE type = 'Expense' AND date LIKE ? 
+            GROUP BY category
+        """
+        data = self.db.fetch_all(query, (f"{month_str}%",))
+        return {row["category"]: row["total"] for row in data if row["total"] is not None}
