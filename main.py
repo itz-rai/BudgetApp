@@ -52,9 +52,12 @@ if __name__ == "__main__":
     theme_manager.load_theme("dark") # Set default to dark
 
     stack = QStackedWidget()
+    stack.setWindowTitle("Budget App")
     login = Login(stacked_widget=stack) 
     stack.addWidget(login)
-    stack.setFixedSize(1000,600)
+    
+    stack.setMinimumSize(1000, 700)
+    stack.resize(1200, 800)
     stack.show()
     sys.exit(app.exec_())
     

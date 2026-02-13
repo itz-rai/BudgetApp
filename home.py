@@ -91,6 +91,10 @@ class HomeScreen(QDialog):
 
         # Load Data
         self._load_accounts()
+        
+        # Resizing & Fullscreen Setup
+        self.setMinimumSize(1100, 800)
+        self.is_fullscreen = False
 
     def setup_sidebar(self):
         self.sidebarContainer = QFrame()
@@ -118,6 +122,12 @@ class HomeScreen(QDialog):
 
         # Theme Support
         self.theme_manager = ThemeManager(QApplication.instance())
+        
+        self.fullscreenBtn = QPushButton("Fullscreen (F11)")
+        self.fullscreenBtn.setObjectName("NavButton")
+        self.fullscreenBtn.clicked.connect(self.toggle_fullscreen)
+        layout.addWidget(self.fullscreenBtn)
+
         self.themeBtn = QPushButton("Switch Theme")
         self.themeBtn.setObjectName("NavButton")
         self.themeBtn.clicked.connect(self.theme_manager.toggle_theme)
@@ -405,6 +415,7 @@ class HomeScreen(QDialog):
         for i, btn in enumerate(self.nav_btns):
             btn.setChecked(i == index)
 
+    def _setup_month_tabs(self):
         """Calculates and populates the month tabs."""
         self.monthTabs.blockSignals(True)
         # QTabBar does not have clear(), must remove individually
@@ -441,6 +452,25 @@ class HomeScreen(QDialog):
                 break
         
         self.monthTabs.blockSignals(False)
+
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts."""
+        if event.key() == Qt.Key_F11:
+            self.toggle_fullscreen()
+        else:
+            super().keyPressEvent(event)
+
+    def toggle_fullscreen(self):
+        """Toggles between fullscreen and normal windowed mode for the main window."""
+        main_win = self.window()
+        if main_win.isFullScreen():
+            main_win.showNormal()
+            self.is_fullscreen = False
+            self.fullscreenBtn.setText("Fullscreen (F11)")
+        else:
+            main_win.showFullScreen()
+            self.is_fullscreen = True
+            self.fullscreenBtn.setText("Exit Fullscreen (F11)")
 
     def _on_month_tab_changed(self):
         index = self.monthTabs.currentIndex()
