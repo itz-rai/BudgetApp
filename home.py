@@ -1,8 +1,9 @@
 import uuid
 from PySide2.QtWidgets import (QDialog, QMessageBox, QApplication, QPushButton, 
                                QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame,
-                               QStackedWidget)
-from PySide2.QtCore import Qt
+                               QStackedWidget, QCalendarWidget)
+from PySide2.QtCore import Qt, QRectF
+from PySide2.QtGui import QPainter, QColor
 from add_account_dialog import AddAccountDialog
 from add_transaction_dialog import AddTransactionDialog
 from account_card import AccountCard
@@ -10,10 +11,59 @@ from stat_card import StatCard
 from controllers import MainController
 from theme_manager import ThemeManager
 
+class TransactionCalendar(QCalendarWidget):
+    def __init__(self, controller, parent=None):
+        super().__init__(parent)
+        self.controller = controller
+        self.daily_summary = {} # { day: {has_income, has_expense} }
+        self.currentPageChanged.connect(self.update_summary)
+        self.update_summary(self.yearShown(), self.monthShown())
+
+    def update_summary(self, year, month):
+        month_str = f"{year}-{month:02d}"
+        self.daily_summary = self.controller.get_daily_transaction_summary(month_str)
+        self.update() # Trigger repaint
+
+    def paintCell(self, painter, rect, date):
+        super().paintCell(painter, rect, date)
+        
+        # Only draw markers for current month being shown
+        if date.month() != self.monthShown():
+            return
+
+        summary = self.daily_summary.get(date.day())
+        if summary is not None:
+            painter.save()
+            painter.setRenderHint(QPainter.Antialiasing)
+            
+            # Marker positions (bottom of the cell)
+            dot_size = 4
+            space = 2
+            start_x = rect.x() + (rect.width() - (dot_size * 2 + space)) / 2
+            y = rect.y() + rect.height() - dot_size - 4
+            
+            # Draw Income Dot (Green)
+            if summary.get("has_income"):
+                painter.setBrush(QColor("#a6e3a1"))
+                painter.setPen(Qt.NoPen)
+                painter.drawEllipse(QRectF(start_x, y, dot_size, dot_size))
+            
+            # Draw Expense Dot (Red)
+            if summary.get("has_expense"):
+                painter.setBrush(QColor("#f38ba8"))
+                painter.setPen(Qt.NoPen)
+                painter.drawEllipse(QRectF(start_x + dot_size + space, y, dot_size, dot_size))
+            
+            painter.restore()
+
 class HomeScreen(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.view_mode = "grid" # grid or list
+
+        # Initialize Controller
+        self.controller = MainController()
+
         # Main Layout
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -35,13 +85,9 @@ class HomeScreen(QDialog):
         self.setup_transactions_view()
         self.contentArea.addWidget(self.transWidget)
 
-        # 5. Calendar View (Placeholder)
-        self.calendarWidget = QWidget()
-        self.calendarWidget.setObjectName("CalendarContainer")
-        self.contentArea.addWidget(self.calendarWidget)
-        
-        # Initialize Controller
-        self.controller = MainController()
+        # 5. Calendar View
+        self.setup_calendar_view()
+        self.contentArea.addWidget(self.calendarTab)
 
         # Load Data
         self._load_accounts()
@@ -249,17 +295,116 @@ class HomeScreen(QDialog):
         
         layout.addWidget(self.transList)
 
+    def setup_calendar_view(self):
+        self.calendarTab = QWidget()
+        layout = QHBoxLayout(self.calendarTab)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
+
+        # Left Side: Custom Calendar
+        left_layout = QVBoxLayout()
+        title = QLabel("Calendar")
+        title.setStyleSheet("font-size: 28px; font-weight: bold; color: #cdd6f4; margin-bottom: 10px;")
+        left_layout.addWidget(title)
+        
+        self.calendar = TransactionCalendar(self.controller)
+        self.calendar.setObjectName("MainCalendar")
+        self.calendar.selectionChanged.connect(self._on_calendar_date_changed)
+        left_layout.addWidget(self.calendar)
+        
+        layout.addLayout(left_layout, stretch=2)
+
+        # Right Side: Daily Breakdown
+        right_panel = QFrame()
+        right_panel.setObjectName("CalendarDailyBreakdown")
+        right_panel.setFixedWidth(350)
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(20, 20, 20, 20)
+        
+        self.dailyTitle = QLabel("Daily Activity")
+        self.dailyTitle.setStyleSheet("font-size: 18px; font-weight: bold; color: #89b4fa; margin-bottom: 15px;")
+        right_layout.addWidget(self.dailyTitle)
+        
+        # Daily Transactions Scroll Area
+        self.dayTransScroll = QScrollArea()
+        self.dayTransScroll.setWidgetResizable(True)
+        self.dayTransScroll.setFrameShape(QFrame.NoFrame)
+        self.dayTransScroll.setObjectName("CalendarDayTransactionsScroll")
+        
+        self.dayTransContainer = QWidget()
+        self.dayTransContainer.setObjectName("CalendarDayTransactionsContainer")
+        self.dayTransLayout = QVBoxLayout(self.dayTransContainer)
+        self.dayTransLayout.setAlignment(Qt.AlignTop)
+        self.dayTransLayout.setSpacing(10)
+        
+        self.dayTransScroll.setWidget(self.dayTransContainer)
+        right_layout.addWidget(self.dayTransScroll)
+        
+        layout.addWidget(right_panel, stretch=1)
+
+    def _on_calendar_date_changed(self):
+        date = self.calendar.selectedDate()
+        date_str = date.toString("yyyy-MM-dd")
+        display_date = date.toString("MMMM d, yyyy")
+        self.dailyTitle.setText(display_date)
+        
+        # Load transactions for this day
+        # Clear existing
+        while self.dayTransLayout.count():
+            item = self.dayTransLayout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        transactions = self.controller.get_transactions_for_day(date_str)
+        
+        if not transactions:
+            empty_lbl = QLabel("No transactions for this day.")
+            empty_lbl.setStyleSheet("color: #a6adc8; font-style: italic;")
+            self.dayTransLayout.addWidget(empty_lbl)
+            return
+
+        for t in transactions:
+            row = QFrame()
+            row.setObjectName("CalendarTransactionRow")
+            r_layout = QVBoxLayout(row)
+            r_layout.setContentsMargins(15, 12, 15, 12)
+            
+            top_row = QHBoxLayout()
+            cat_lbl = QLabel(t.category)
+            cat_lbl.setStyleSheet("font-weight: bold; font-size: 14px; color: #cdd6f4;")
+            
+            amount_str = f"+${t.amount:,.2f}" if t.type == "Income" else f"-${t.amount:,.2f}"
+            color = "#a6e3a1" if t.type == "Income" else "#f38ba8"
+            amount_lbl = QLabel(amount_str)
+            amount_lbl.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 14px;")
+            
+            top_row.addWidget(cat_lbl)
+            top_row.addStretch()
+            top_row.addWidget(amount_lbl)
+            
+            r_layout.addLayout(top_row)
+            
+            if t.note:
+                note_lbl = QLabel(t.note)
+                note_lbl.setWordWrap(True)
+                note_lbl.setStyleSheet("color: #a6adc8; font-size: 12px;")
+                r_layout.addWidget(note_lbl)
+            
+            self.dayTransLayout.addWidget(row)
+
     def switch_view(self, index):
         self.contentArea.setCurrentIndex(index)
         if index == 1: # Transactions
             self._setup_month_tabs()
             self._on_month_tab_changed()
+        elif index == 2: # Calendar
+            self.calendar.update_summary(self.calendar.yearShown(), self.calendar.monthShown()) # Refresh markers
+            self._on_calendar_date_changed() # Load transactions for selected day
         
         # Update Nav State
         for i, btn in enumerate(self.nav_btns):
             btn.setChecked(i == index)
 
-    def _setup_month_tabs(self):
         """Calculates and populates the month tabs."""
         self.monthTabs.blockSignals(True)
         # QTabBar does not have clear(), must remove individually

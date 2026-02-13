@@ -201,6 +201,52 @@ QScrollArea#MonthTabsScroll, QScrollArea#MonthTabsScroll > QWidget, QScrollArea#
     border: none;
 }
 
+/* Calendar View Styling */
+QCalendarWidget QWidget {
+    alternate-background-color: #313244;
+}
+
+QCalendarWidget QAbstractItemView:enabled {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+    selection-background-color: #89b4fa;
+    selection-color: #1e1e2e;
+    font-size: 14px;
+}
+
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background-color: #181825;
+    border-bottom: 1px solid #313244;
+}
+
+QCalendarWidget QToolButton {
+    color: #cdd6f4;
+    font-weight: bold;
+    background-color: transparent;
+    border: none;
+    padding: 5px;
+}
+
+QCalendarWidget QToolButton:hover {
+    background-color: #313244;
+}
+
+QCalendarWidget QMenu {
+    background-color: #181825;
+    color: #cdd6f4;
+    border: 1px solid #313244;
+}
+
+QFrame#CalendarDailyBreakdown {
+    background-color: #181825;
+    border-left: 1px solid #313244;
+}
+
+QFrame#CalendarTransactionRow {
+    background-color: #313244;
+    border-radius: 8px;
+}
+
 QWidget#CalendarContainer {
     background-color: transparent;
 }

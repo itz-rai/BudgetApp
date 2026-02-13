@@ -169,6 +169,34 @@ class MainController:
             return True
         return False
 
+    def get_transactions_for_day(self, date_str: str):
+        """Fetches all transactions for a specific YYYY-MM-DD."""
+        query = "SELECT * FROM transactions WHERE date = ? ORDER BY type DESC"
+        data = self.db.fetch_all(query, (date_str,))
+        from models import Transaction
+        return [Transaction.from_dict(row) for row in data]
+
+    def get_daily_transaction_summary(self, month_str: str):
+        """Returns a dict mapping days of the month to their transaction types (Income/Expense)."""
+        query = "SELECT date, type FROM transactions WHERE date LIKE ?"
+        data = self.db.fetch_all(query, (f"{month_str}%",))
+        
+        summary = {} # { day_int: {has_income: bool, has_expense: bool} }
+        for row in data:
+            try:
+                day = int(row["date"].split("-")[2])
+            except (IndexError, ValueError):
+                continue
+                
+            if day not in summary:
+                summary[day] = {"has_income": False, "has_expense": False}
+            
+            if row["type"] == "Income":
+                summary[day]["has_income"] = True
+            else:
+                summary[day]["has_expense"] = True
+        return summary
+
     def get_unique_categories(self):
         """Fetches distinct categories from transactions combined with defaults."""
         defaults = {"Food", "Rent", "Salary", "Entertainment", "Transport", "Shopping", "Utilities", "Health"}
