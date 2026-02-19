@@ -1,7 +1,9 @@
 import sqlite3
 import os
 
-DB_NAME = "budget.db"
+# Get the directory where database.py is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "budget.db")
 
 class DatabaseManager:
     def __init__(self, db_name=DB_NAME):
