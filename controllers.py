@@ -41,6 +41,9 @@ class MainController:
         """Adds a transaction and updates the account balance."""
         new_id = uuid.uuid4().hex
         
+        # Ensure category exists in DB
+        self.ensure_category_exists(category)
+        
         # 1. Add Transaction
         success = self.db.execute_query(
             """INSERT INTO transactions (id, account_id, date, amount, category, type, note) 
@@ -134,6 +137,10 @@ class MainController:
         old_type = old_t["type"]
         old_account_id = old_t["account_id"]
 
+        # Ensure category exists in DB
+        if "category" in data:
+            self.ensure_category_exists(data["category"])
+
         # 2. Update Transaction
         success = self.db.execute_query(
             """UPDATE transactions 
@@ -198,14 +205,28 @@ class MainController:
         return summary
 
     def get_unique_categories(self):
-        """Fetches distinct categories from transactions combined with defaults."""
-        defaults = {"Food", "Rent", "Salary", "Entertainment", "Transport", "Shopping", "Utilities", "Health"}
+        """Fetches distinct categories from the categories table."""
+        data = self.db.fetch_all("SELECT name FROM categories ORDER BY name ASC")
+        return [row["name"] for row in data]
+
+    def ensure_category_exists(self, category_name: str):
+        """Checks if a category exists, if not, adds it to the database."""
+        if not category_name:
+            return
         
-        # Get used categories
-        data = self.db.fetch_all("SELECT DISTINCT category FROM transactions")
-        used = {row["category"] for row in data if row["category"]}
-        
-        return sorted(list(defaults.union(used)))
+        # Trim whitespace
+        category_name = category_name.strip()
+        if not category_name:
+            return
+
+        exists = self.db.fetch_one("SELECT id FROM categories WHERE name = ?", (category_name,))
+        if not exists:
+            new_id = uuid.uuid4().hex
+            self.db.execute_query("INSERT INTO categories (id, name) VALUES (?, ?)", (new_id, category_name))
+
+    def delete_category(self, name: str) -> bool:
+        """Deletes a category from the database."""
+        return self.db.execute_query("DELETE FROM categories WHERE name = ?", (name,))
 
     def get_category_spending(self, month_str: str):
         """Returns a dict of {category: total_amount} for expenses in a given month."""

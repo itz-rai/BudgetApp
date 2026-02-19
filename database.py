@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import uuid
 
 # Get the directory where database.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +49,22 @@ class DatabaseManager:
                         FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
                     )
                 """)
+                
+                # Create Categories Table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS categories (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL UNIQUE
+                    )
+                """)
+
+                # Seed Default Categories if empty
+                cursor.execute("SELECT COUNT(*) as count FROM categories")
+                if cursor.fetchone()["count"] == 0:
+                    import uuid
+                    defaults = ["Food", "Rent", "Salary", "Entertainment", "Transport", "Shopping", "Utilities", "Health"]
+                    for cat in defaults:
+                        cursor.execute("INSERT INTO categories (id, name) VALUES (?, ?)", (uuid.uuid4().hex, cat))
                 
                 conn.commit()
             except sqlite3.Error as e:

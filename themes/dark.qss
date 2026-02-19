@@ -1,5 +1,7 @@
 /* Dark Mode Theme - Nord/Dracula Inspired */
-QMainWindow, QDialog {
+QMainWindow, QDialog, QStackedWidget#ContentArea, 
+QWidget#DashboardView, QWidget#TransactionsView, 
+QWidget#CalendarView, QWidget#CategoriesView, QWidget#ChartsContainer {
     background-color: #1e1e2e;
     color: #cdd6f4;
 }
@@ -237,9 +239,16 @@ QCalendarWidget QMenu {
     border: 1px solid #313244;
 }
 
-QFrame#CalendarDailyBreakdown {
+QFrame#CalendarDailyBreakdown, QFrame#CategoryListPanel,
+QWidget#CalendarDayTransactionsContainer, QWidget#CategoryListContainer {
     background-color: #181825;
     border-left: 1px solid #313244;
+}
+
+QFrame#CategoryRow {
+    background-color: #313244;
+    border-radius: 8px;
+    margin-bottom: 5px;
 }
 
 QFrame#CalendarTransactionRow {

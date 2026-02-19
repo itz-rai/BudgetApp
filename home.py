@@ -77,22 +77,27 @@ class HomeScreen(QDialog):
 
         # 2. Content Area Setup
         self.contentArea = QStackedWidget()
+        self.contentArea.setObjectName("ContentArea")
         main_layout.addWidget(self.contentArea)
 
         # 3. Dashboard View (Home)
         self.setup_dashboard_view()
+        self.dashboardWidget.setObjectName("DashboardView")
         self.contentArea.addWidget(self.dashboardWidget)
 
         # 4. Transactions View
         self.setup_transactions_view()
+        self.transWidget.setObjectName("TransactionsView")
         self.contentArea.addWidget(self.transWidget)
 
         # 5. Calendar View
         self.setup_calendar_view()
+        self.calendarTab.setObjectName("CalendarView")
         self.contentArea.addWidget(self.calendarTab)
 
         # 6. Categories View
         self.setup_categories_view()
+        self.categoriesTab.setObjectName("CategoriesView")
         self.contentArea.addWidget(self.categoriesTab)
 
         # Load Data
@@ -122,8 +127,8 @@ class HomeScreen(QDialog):
         self.nav_btns = []
         self.add_nav_btn(layout, "Dashboard", lambda: self.switch_view(0))
         self.add_nav_btn(layout, "Transactions", lambda: self.switch_view(1))
-        self.add_nav_btn(layout, "Categories", lambda: self.switch_view(3))
         self.add_nav_btn(layout, "Calendar", lambda: self.switch_view(2))
+        self.add_nav_btn(layout, "Categories", lambda: self.switch_view(3))
 
         layout.addStretch()
 
@@ -454,19 +459,88 @@ class HomeScreen(QDialog):
 
         # Charts Section
         self.charts_container = QWidget()
+        self.charts_container.setObjectName("ChartsContainer")
         self.charts_layout = QHBoxLayout(self.charts_container)
         self.charts_layout.setContentsMargins(0, 0, 0, 0)
         
         self.pie_chart_view = QtCharts.QChartView()
         self.pie_chart_view.setRenderHint(QPainter.Antialiasing)
         self.pie_chart_view.setStyleSheet("background: transparent;")
+        self.charts_layout.addWidget(self.pie_chart_view, stretch=2)
+
+        # Categories Management List
+        self.cat_list_panel = QFrame()
+        self.cat_list_panel.setObjectName("CategoryListPanel")
+        self.cat_list_panel.setFixedWidth(300)
+        self.cat_list_layout = QVBoxLayout(self.cat_list_panel)
+        self.cat_list_layout.setContentsMargins(15, 15, 15, 15)
         
-        self.charts_layout.addWidget(self.pie_chart_view)
+        cat_title = QLabel("Manage Categories")
+        cat_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #89b4fa; margin-bottom: 10px;")
+        self.cat_list_layout.addWidget(cat_title)
+        
+        self.cat_scroll = QScrollArea()
+        self.cat_scroll.setWidgetResizable(True)
+        self.cat_scroll.setFrameShape(QFrame.NoFrame)
+        self.cat_scroll_content = QWidget()
+        self.cat_scroll_content.setObjectName("CategoryListContainer")
+        self.cat_scroll_layout = QVBoxLayout(self.cat_scroll_content)
+        self.cat_scroll_layout.setAlignment(Qt.AlignTop)
+        self.cat_scroll.setWidget(self.cat_scroll_content)
+        
+        self.cat_list_layout.addWidget(self.cat_scroll)
+        self.charts_layout.addWidget(self.cat_list_panel, stretch=1)
+        
         layout.addWidget(self.charts_container)
         
         # Initial chart load
         self._populate_month_tabs(self.categoryMonthTabs)
         self._refresh_charts()
+        self._load_categories()
+
+    def _load_categories(self):
+        """Loads categories into the management list."""
+        while self.cat_scroll_layout.count():
+            item = self.cat_scroll_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        categories = self.controller.get_unique_categories()
+        for cat in categories:
+            row = QFrame()
+            row.setObjectName("CategoryRow")
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(10, 5, 10, 5)
+            
+            lbl = QLabel(cat)
+            lbl.setStyleSheet("font-size: 14px; color: #cdd6f4;")
+            row_layout.addWidget(lbl)
+            
+            row_layout.addStretch()
+            
+            del_btn = QPushButton("✕")
+            del_btn.setFixedSize(24, 24)
+            del_btn.setStyleSheet("""
+                QPushButton { 
+                    background-color: transparent; color: #f38ba8; font-weight: bold; border-radius: 4px; 
+                }
+                QPushButton:hover { background-color: #f38ba8; color: #181825; }
+            """)
+            del_btn.clicked.connect(lambda checked=False, name=cat: self._confirm_delete_category(name))
+            row_layout.addWidget(del_btn)
+            
+            self.cat_scroll_layout.addWidget(row)
+
+    def _confirm_delete_category(self, name):
+        confirm = QMessageBox.question(
+            self, "Delete Category",
+            f"Are you sure you want to delete the category '{name}'?\n\nExisting transactions will keep this category, but it will be removed from future selection.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        if confirm == QMessageBox.Yes:
+            if self.controller.delete_category(name):
+                self._load_categories()
+                self._refresh_charts()
 
     def _on_calendar_date_changed(self):
         date = self.calendar.selectedDate()
@@ -529,6 +603,7 @@ class HomeScreen(QDialog):
         elif index == 3: # Categories
             self._populate_month_tabs(self.categoryMonthTabs)
             self._refresh_charts()
+            self._load_categories()
         
         # Update Nav State
         for i, btn in enumerate(self.nav_btns):
@@ -753,6 +828,8 @@ class HomeScreen(QDialog):
                     # Refresh viewing
                     self._load_accounts()
                     self._load_transactions()
+                    if self.contentArea.currentIndex() == 3:
+                        self._load_categories()
                     QMessageBox.information(self, "Success", "Transaction added successfully!")
                 else:
                     QMessageBox.critical(self, "Error", "Failed to add transaction.")
